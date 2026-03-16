@@ -37,7 +37,7 @@ def get_car_image(brand):
 
 st.set_page_config(
     page_title="Used Car Predictor",
-    page_icon="🚗",
+    page_icon="🏁",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
@@ -161,14 +161,14 @@ html, body, [class*="css"] {{
 .field {{ margin-bottom: 16px; }}
 .field-label {{
   display: flex; align-items: center; gap: 8px;
-  font-size: 10.5px; font-weight: 600; letter-spacing: 0.13em;
-  text-transform: uppercase; color: var(--text-2); margin-bottom: 7px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.13em;
+  text-transform: uppercase; color: #a8b0c0; margin-bottom: 7px;
 }}
 .field-num {{
   width: 18px; height: 18px; border-radius: 50%;
-  background: var(--surface3); border: 1px solid var(--border);
+  background: var(--surface3); border: 1px solid rgba(255,255,255,0.15);
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 9px; color: var(--text-3); font-weight: 700;
+  font-size: 9px; color: #a8b0c0; font-weight: 700;
 }}
 .field-num-filled {{ background: var(--gold-dim); border-color: var(--border-gold); color: var(--gold); }}
 .divider-line {{ border: none; border-top: 1px solid var(--border); margin: 22px 0; }}
@@ -192,7 +192,7 @@ html, body, [class*="css"] {{
 .specs-title {{ font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-3); margin-bottom: 12px; }}
 .spec-row {{ display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }}
 .spec-row:last-child {{ border-bottom: none; }}
-.spec-key {{ color: var(--text-2); font-weight: 500; }}
+.spec-key {{ color: #a8b0c0; font-weight: 500; }}
 .spec-val {{ color: var(--text); font-weight: 600; }}
 .spec-val-green {{ color: #3ecf8e; font-weight: 600; }}
 .spec-val-red {{ color: #f87171; font-weight: 600; }}
