@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Car Price Predictor</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='images/logo.ico') }}"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Syne:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+
+  <body>
+    <!-- ── Navbar ── -->
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <img
+          src="{{ url_for('static', filename='images/logoF.png') }}"
+          alt="AutoVal Logo"
+          class="navbar-logo"
+        />
+      </div>
+    </nav>
+
+    <main class="site-main">
+      <div class="card">
+        <!-- ── Header ── -->
+        <div class="card-header">
+          <div class="header-top">
+            <div class="pill"><span class="pill-dot"></span>AI Powered</div>
+            <div class="header-right">
+              <span class="model-tag">XGBoost Model Accuracy</span>
+              <div class="accuracy-badge">
+                <span class="accuracy-num">88%</span>
+              </div>
+            </div>
+          </div>
+          <h1 class="card-title">Used Car <em>Price</em><br />Predictor</h1>
+          <p class="card-sub">
+            Select a vehicle to get an instant market valuation
+          </p>
+          <div class="steps">
+            <div class="step" id="step1"></div>
+            <div class="step" id="step2"></div>
+            <div class="step" id="step3"></div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="field" id="fieldBrand">
+            <label class="field-label" for="brand">
+              <span class="field-num">1</span> Brand
+            </label>
+            <div class="select-wrap">
+              <select id="brand">
+                <option value="">Select Brand</option>
+                {% for brand in brands %}
+                <option value="{{ brand }}">{{ brand }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="field" id="fieldModel">
+            <label class="field-label" for="model">
+              <span class="field-num">2</span> Model
+            </label>
+            <div class="select-wrap">
+              <select id="model" disabled>
+                <option value="">Select Model</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field" id="fieldYear">
+            <label class="field-label" for="year">
+              <span class="field-num">3</span> Year
+            </label>
+            <div class="select-wrap">
+              <select id="year" disabled>
+                <option value="">Select Year</option>
+              </select>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <div class="car-image-wrap" id="carImageWrap" style="display: none">
+            <img id="carImage" src="" alt="Car" class="car-image" />
+            <div class="car-image-overlay">
+              <span id="carImageLabel"></span>
+            </div>
+          </div>
+
+          <div id="extraFields" style="display: none">
+            <div class="extra-fields-title">Refine Your Estimate</div>
+
+            <div class="field">
+              <label class="field-label" for="fuelType">⛽ Fuel Type</label>
+              <div class="select-wrap">
+                <select id="fuelType">
+                  <option value="">Unknown</option>
+                  <option value="gasoline">Gasoline</option>
+                  <option value="hybrid">Hybrid</option>
+                  <option value="plug-in hybrid">Plug-in Hybrid</option>
+                  <option value="diesel">Diesel</option>
+                  <option value="e85 flex fuel">E85 Flex Fuel</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="transmission"
+                >⚡ Transmission</label
+              >
+              <div class="select-wrap">
+                <select id="transmission">
+                  <option value="automatic">Automatic</option>
+                  <option value="manual">Manual</option>
+                  <option value="cvt">CVT</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="extColor"
+                >🎨 Exterior Color</label
+              >
+              <div class="select-wrap">
+                <select id="extColor">
+                  <option value="other">Other / Unknown</option>
+                  <option value="black">Black</option>
+                  <option value="white">White</option>
+                  <option value="gray">Gray</option>
+                  <option value="silver">Silver</option>
+                  <option value="blue">Blue</option>
+                  <option value="red">Red</option>
+                  <option value="brown">Brown</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="accident"
+                >🛡 Accident History</label
+              >
+              <div class="select-wrap">
+                <select id="accident">
+                  <option value="0">No accidents reported</option>
+                  <option value="1">At least 1 accident reported</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="specs" id="specsPanel" style="display: none"></div>
+
+          <button
+            class="btn-predict"
+            id="predictBtn"
+            onclick="predictPrice()"
+            disabled
+          >
+            Get Price Estimate →
+          </button>
+
+          <div class="loader" id="loader">
+            <div class="loader-ring"></div>
+            <span class="loader-text">Analyzing vehicle data</span>
+          </div>
+
+          <div class="error-msg" id="errorMsg"></div>
+
+          <div class="result-panel" id="resultPanel">
+            <div class="result-top">
+              <div class="result-label">Estimated Market Value</div>
+              <div class="result-price" id="resultPrice"></div>
+              <div class="result-range" id="resultRange"></div>
+            </div>
+            <div class="result-bottom">
+              <div class="result-icon"></div>
+              <p class="result-note">
+                Based on comparable listings. Actual price may vary by
+                condition, location, and seller.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="footer-dot"></div>
+          <span class="footer-text"
+            >Powered by a trained XGBoost regression model &nbsp;·&nbsp; R²
+            0.8822</span
+          >
+        </div>
+      </div>
+
+      <script>
+        // ── Navbar scroll shadow ────────────────────────
+        const navbar = document.querySelector(".navbar");
+        window.addEventListener(
+          "scroll",
+          () => {
+            navbar.classList.toggle("scrolled", window.scrollY > 10);
+          },
+          { passive: true },
+        );
+
+        const CURRENT_YEAR = 2025;
+
+        const ALL_IMAGES = [
+          "bugatti.jpg",
+          "ford.jpg",
+          "hummer.jpg",
+          "lambo.webp",
+          "lykan.jpg",
+          "mitsubishi.webp",
+          "mustang.jpg",
+          "nissan.webp",
+        ];
+
+        function getCarImage(brand, model) {
+          return ALL_IMAGES[Math.floor(Math.random() * ALL_IMAGES.length)];
+        }
+
+        const elBrand = document.getElementById("brand");
+        const elModel = document.getElementById("model");
+        const elYear = document.getElementById("year");
+        const elFuelType = document.getElementById("fuelType");
+        const elTransmission = document.getElementById("transmission");
+        const elExtColor = document.getElementById("extColor");
+        const elAccident = document.getElementById("accident");
+        const extraFields = document.getElementById("extraFields");
+        const specsPanel = document.getElementById("specsPanel");
+        const carImageWrap = document.getElementById("carImageWrap");
+        const carImage = document.getElementById("carImage");
+        const carImageLabel = document.getElementById("carImageLabel");
+        const loader = document.getElementById("loader");
+        const errorMsg = document.getElementById("errorMsg");
+        const resultPanel = document.getElementById("resultPanel");
+        const resultPrice = document.getElementById("resultPrice");
+        const resultRange = document.getElementById("resultRange");
+        const predictBtn = document.getElementById("predictBtn");
+
+        const showLoader = () => loader.classList.add("active");
+        const hideLoader = () => loader.classList.remove("active");
+        const showResult = () => resultPanel.classList.add("active");
+        const hideResult = () => resultPanel.classList.remove("active");
+        const showError = (m) => {
+          errorMsg.textContent = m;
+          errorMsg.classList.add("active");
+        };
+        const clearError = () => errorMsg.classList.remove("active");
+
+        function showCarImage(brand, model) {
+          const file = getCarImage(brand, model);
+          if (!file) {
+            carImageWrap.style.display = "none";
+            return;
+          }
+          carImage.src = `/static/images/${file}`;
+          carImage.onerror = () => {
+            carImageWrap.style.display = "none";
+          };
+          carImageLabel.textContent = `${capitalize(brand)}`;
+          carImageWrap.style.display = "block";
+        }
+
+        function hideCarImage() {
+          carImageWrap.style.display = "none";
+        }
+        function capitalize(str) {
+          return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function updateSteps() {
+          const b = !!elBrand.value,
+            m = !!elModel.value,
+            y = !!elYear.value;
+          document.getElementById("step1").className =
+            "step " + (b ? (m ? "done" : "active") : "");
+          document.getElementById("step2").className =
+            "step " + (m ? (y ? "done" : "active") : "");
+          document.getElementById("step3").className =
+            "step " + (y ? "active" : "");
+          document.getElementById("fieldBrand").classList.toggle("filled", b);
+          document.getElementById("fieldModel").classList.toggle("filled", m);
+          document.getElementById("fieldYear").classList.toggle("filled", y);
+          predictBtn.disabled = !(b && m && y);
+        }
+
+        function resetBelow(level) {
+          clearError();
+          hideResult();
+          hideLoader();
+          specsPanel.style.display = "none";
+          specsPanel.innerHTML = "";
+          extraFields.style.display = "none";
+          hideCarImage();
+          if (level <= 1) {
+            elModel.innerHTML = '<option value="">Select Model</option>';
+            elModel.disabled = true;
+          }
+          if (level <= 2) {
+            elYear.innerHTML = '<option value="">Select Year</option>';
+            elYear.disabled = true;
+          }
+          updateSteps();
+        }
+
+        elBrand.addEventListener("change", function () {
+          resetBelow(1);
+          if (!this.value) return;
+          fetch("/get_models/" + this.value)
+            .then((r) => r.json())
+            .then((data) => {
+              data.forEach((m) => {
+                const o = document.createElement("option");
+                o.value = o.text = m;
+                elModel.appendChild(o);
+              });
+              elModel.disabled = false;
+              updateSteps();
+            })
+            .catch(() => showError("Failed to load models. Please try again."));
+        });
+
+        elModel.addEventListener("change", function () {
+          resetBelow(2);
+          if (!this.value) return;
+          fetch(`/get_years/${elBrand.value}/${this.value}`)
+            .then((r) => r.json())
+            .then((data) => {
+              data.forEach((y) => {
+                const o = document.createElement("option");
+                o.value = o.text = y;
+                elYear.appendChild(o);
+              });
+              elYear.disabled = false;
+              updateSteps();
+            })
+            .catch(() => showError("Failed to load years. Please try again."));
+        });
+
+        elYear.addEventListener("change", function () {
+          clearError();
+          hideResult();
+          specsPanel.style.display = "none";
+          extraFields.style.display = "none";
+          hideCarImage();
+          if (!this.value) {
+            updateSteps();
+            return;
+          }
+          updateSteps();
+
+          fetch(`/get_car_data/${elBrand.value}/${elModel.value}/${this.value}`)
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.error) {
+                showError(data.error);
+                return;
+              }
+              const age = CURRENT_YEAR - data.model_year;
+              showCarImage(elBrand.value, elModel.value);
+              if (data.fuel_type && data.fuel_type !== "n/a") {
+                const ft = data.fuel_type.toLowerCase().trim();
+                const opt = elFuelType.querySelector(`option[value="${ft}"]`);
+                if (opt) elFuelType.value = ft;
+              }
+              if (data.transmission) {
+                const t = data.transmission.toLowerCase();
+                if (t.includes("manual") || t.includes("m/t"))
+                  elTransmission.value = "manual";
+                else if (t.includes("cvt")) elTransmission.value = "cvt";
+                else elTransmission.value = "automatic";
+              }
+              elAccident.value = data.accident == 1 ? "1" : "0";
+              specsPanel.innerHTML = `
+                <div class="specs-title">Vehicle Specifications</div>
+                <div class="spec-row"><span class="spec-key">⚙ Engine</span><span class="spec-val">${data.engine || "N/A"}</span></div>
+                <div class="spec-row"><span class="spec-key">⚡ Transmission</span><span class="spec-val">${data.transmission || "N/A"}</span></div>
+                <div class="spec-row"><span class="spec-key">📍 Mileage</span><span class="spec-val">${Number(data.milage).toLocaleString()} mi</span></div>
+                <div class="spec-row"><span class="spec-key">📅 Vehicle Age</span><span class="spec-val">${age} ${age === 1 ? "year" : "years"}</span></div>
+                <div class="spec-row"><span class="spec-key">⛽ Fuel Type</span><span class="spec-val">${data.fuel_type || "N/A"}</span></div>
+                <div class="spec-row"><span class="spec-key">🎨 Ext. Color</span><span class="spec-val">${data.ext_col || "N/A"}</span></div>
+                <div class="spec-row">
+                  <span class="spec-key">🛡 Accident</span>
+                  <span class="spec-val" style="color:${data.accident == 1 ? "#f87171" : "#3ecf8e"}">
+                    ${data.accident == 1 ? "Reported" : "None Reported"}
+                  </span>
+                </div>`;
+              specsPanel.style.display = "block";
+              extraFields.style.display = "block";
+            })
+            .catch(() => showError("Could not load vehicle data."));
+        });
+
+        function predictPrice() {
+          clearError();
+          hideResult();
+          if (!elBrand.value || !elModel.value || !elYear.value) {
+            showError("Please select Brand, Model, and Year first.");
+            return;
+          }
+          showLoader();
+          predictBtn.disabled = true;
+          const fd = new FormData();
+          fd.append("brand", elBrand.value);
+          fd.append("model", elModel.value);
+          fd.append("year", elYear.value);
+          fd.append("fuel_type", elFuelType.value);
+          fd.append("transmission", elTransmission.value);
+          fd.append("ext_col", elExtColor.value);
+          fd.append("accident", elAccident.value);
+          fetch("/predict", { method: "POST", body: fd })
+            .then((r) => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return r.json();
+            })
+            .then((data) => {
+              hideLoader();
+              predictBtn.disabled = false;
+              if (data.error) {
+                showError(data.error);
+                return;
+              }
+              const price = Math.round(Number(data.predicted_price));
+              resultPrice.textContent = "$" + price.toLocaleString();
+              resultRange.textContent = `Market range: $${Math.round(price * 0.92).toLocaleString()} – $${Math.round(price * 1.08).toLocaleString()}`;
+              showResult();
+            })
+            .catch((err) => {
+              hideLoader();
+              predictBtn.disabled = false;
+              showError(
+                "Prediction failed. Check your connection and try again.",
+              );
+              console.error(err);
+            });
+        }
+      </script>
+    </main>
+
+    <div class="footer-top-imgs">
+      <img
+        src="{{ url_for('static', filename='images/fnf.png') }}"
+        alt=""
+        class="footer-top-img--left"
+      />
+      <img
+        src="{{ url_for('static', filename='images/bb.png') }}"
+        alt=""
+        class="footer-top-img--right"
+      />
+    </div>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div class="site-footer-top">
+          <div class="footer-brand">
+            <img
+              src="{{ url_for('static', filename='images/logoF.png') }}"
+              alt="AutoVal"
+            />
+            <p>
+              AI-powered used car valuations trained on real market data. Get
+              instant price estimates in seconds.
+            </p>
+          </div>
+          <div class="footer-col">
+            <div class="footer-col-title">Model Performance</div>
+            <div style="display: flex; flex-direction: column; gap: 16px">
+              <div class="footer-stat">
+                <span class="footer-stat-num">88%</span>
+                <span class="footer-stat-label">Accuracy</span>
+              </div>
+              <div class="footer-stat">
+                <span class="footer-stat-num">0.8822</span>
+                <span class="footer-stat-label">R² Score</span>
+              </div>
+              <div class="footer-stat">
+                <span class="footer-stat-num">4,009</span>
+                <span class="footer-stat-label">Training Samples</span>
+              </div>
+            </div>
+          </div>
+          <div class="footer-col">
+            <div class="footer-col-title">Built With</div>
+            <ul>
+              <li><a href="#">Python &amp; Flask</a></li>
+              <li><a href="#">XGBoost Regressor</a></li>
+              <li><a href="#">Scikit-learn Pipeline</a></li>
+            </ul>
+          </div>
+        </div>
+        <hr class="site-footer-divider" />
+        <div class="site-footer-bottom">
+          <p class="footer-copy">
+            &copy; 2025 <span>UCPP</span> &mdash; Used Car Price Predictor.
+            Built for IT20.
+          </p>
+          <div class="footer-tech">
+            <span class="footer-tech-pill">XGBoost</span>
+            <span class="footer-tech-pill">Flask</span>
+            <span class="footer-tech-pill">R² 0.8822</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
