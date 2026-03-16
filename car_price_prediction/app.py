@@ -3,8 +3,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import os
 
 CURRENT_YEAR = 2025
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ----------------------------
 # Helper Functions
@@ -79,7 +82,7 @@ def build_features(brand, model_name, model_year, milage, fuel_type,
 # Load Data
 # ----------------------------
 
-df = pd.read_csv("used_cars.csv")
+df = pd.read_csv(os.path.join(BASE_DIR, "used_cars.csv"))
 df.columns = df.columns.str.strip().str.lower()
 
 for col in df.select_dtypes(include="object").columns:
@@ -99,7 +102,7 @@ df["accident"] = df["accident"].apply(
     lambda x: 0 if any(w in x for w in ["none", "no", "clean"]) else 1
 )
 
-model = joblib.load("rf_model.pkl")
+model = joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
 
 # ----------------------------
 # Streamlit UI
