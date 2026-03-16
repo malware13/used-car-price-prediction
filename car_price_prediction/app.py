@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 import joblib
 import os
-import requests
 
 CURRENT_YEAR = 2025
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,15 +27,8 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-}
-
-.stApp {
-    background: #0a0a0f;
-    color: #f0ede8;
-}
-
+html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
+.stApp { background: #0a0a0f; color: #f0ede8; }
 #MainMenu, footer, header { visibility: hidden; }
 
 .hero-title {
@@ -51,9 +43,7 @@ html, body, [class*="css"] {
     background-clip: text;
     margin-bottom: 0.3rem;
 }
-
 .hero-subtitle {
-    font-family: 'DM Sans', sans-serif;
     font-size: 1.1rem;
     font-weight: 300;
     color: #7a7a8a;
@@ -61,7 +51,6 @@ html, body, [class*="css"] {
     text-transform: uppercase;
     margin-bottom: 2.5rem;
 }
-
 .section-label {
     font-family: 'Syne', sans-serif;
     font-size: 0.7rem;
@@ -71,33 +60,29 @@ html, body, [class*="css"] {
     color: #c8a96e;
     margin-bottom: 1rem;
 }
-
 .car-image-container {
     width: 100%;
     border-radius: 12px;
     overflow: hidden;
     background: #13131a;
     border: 1px solid #1e1e2e;
-    aspect-ratio: 16/9;
+    height: 220px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-
 .car-image-container img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border-radius: 12px;
 }
-
 .stat-row {
     display: flex;
     gap: 0.8rem;
     flex-wrap: wrap;
     margin: 1rem 0;
 }
-
 .stat-pill {
     background: #1a1a24;
     border: 1px solid #2a2a3a;
@@ -109,7 +94,6 @@ html, body, [class*="css"] {
     align-items: center;
     gap: 0.4rem;
 }
-
 .price-card {
     background: linear-gradient(135deg, #1a1508 0%, #13131a 100%);
     border: 1px solid #c8a96e55;
@@ -117,23 +101,8 @@ html, body, [class*="css"] {
     padding: 2.5rem;
     text-align: center;
     margin-top: 1.5rem;
-    position: relative;
-    overflow: hidden;
 }
-
-.price-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle at center, #c8a96e08 0%, transparent 60%);
-    pointer-events: none;
-}
-
 .price-label {
-    font-family: 'DM Sans', sans-serif;
     font-size: 0.75rem;
     font-weight: 500;
     letter-spacing: 0.18em;
@@ -141,7 +110,6 @@ html, body, [class*="css"] {
     color: #c8a96e;
     margin-bottom: 0.5rem;
 }
-
 .price-value {
     font-family: 'Syne', sans-serif;
     font-size: 3.5rem;
@@ -150,26 +118,22 @@ html, body, [class*="css"] {
     letter-spacing: -0.02em;
     line-height: 1;
 }
-
 .price-note {
     font-size: 0.8rem;
     color: #5a5a6a;
     margin-top: 0.8rem;
 }
-
 .divider {
     border: none;
     border-top: 1px solid #1e1e2e;
     margin: 1.5rem 0;
 }
-
 .stSelectbox > div > div {
     background: #13131a !important;
     border: 1px solid #2a2a3a !important;
     border-radius: 10px !important;
     color: #f0ede8 !important;
 }
-
 .stButton > button {
     background: linear-gradient(135deg, #c8a96e, #a07840) !important;
     color: #0a0a0f !important;
@@ -179,14 +143,9 @@ html, body, [class*="css"] {
     font-weight: 700 !important;
     font-size: 0.95rem !important;
     letter-spacing: 0.05em !important;
-    padding: 0.7rem 2rem !important;
     width: 100% !important;
-    transition: opacity 0.2s ease !important;
 }
-
-.stButton > button:hover {
-    opacity: 0.85 !important;
-}
+.stButton > button:hover { opacity: 0.85 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -203,16 +162,13 @@ def simplify_transmission(t):
         return "cvt"
     return "automatic"
 
-
 def simplify_ext_col(color):
     top = ["black", "white", "gray", "silver", "blue", "red", "brown"]
     return color if color in top else "other"
 
-
 def extract_engine_hp(engine_str):
     m = re.search(r"(\d+\.?\d*)\s*hp", str(engine_str), re.IGNORECASE)
     return float(m.group(1)) if m else np.nan
-
 
 def extract_cylinders(engine_str):
     text = str(engine_str).lower()
@@ -220,7 +176,6 @@ def extract_cylinders(engine_str):
     if m:
         return float(m.group(1) or m.group(2))
     return np.nan
-
 
 def build_features(brand, model_name, model_year, milage, fuel_type,
                    transmission, ext_col, accident, engine=""):
@@ -244,33 +199,18 @@ def build_features(brand, model_name, model_year, milage, fuel_type,
         "mileage_sq": mileage_sq, "age_sq": age_sq, "age_x_mileage": age_x_mileage,
     }])
 
-
-def get_car_image_url(brand, model_name, year):
-    """Try to fetch car image from Wikipedia."""
-    try:
-        query = f"{year} {brand} {model_name}"
-        params = {
-            "action": "query",
-            "titles": query,
-            "prop": "pageimages",
-            "format": "json",
-            "pithumbsize": 700,
-            "redirects": 1
-        }
-        resp = requests.get("https://en.wikipedia.org/w/api.php", params=params, timeout=5)
-        pages = resp.json().get("query", {}).get("pages", {})
-        for page in pages.values():
-            thumb = page.get("thumbnail", {}).get("source")
-            if thumb:
-                return thumb
-    except Exception:
-        pass
-    return None
-
+def get_car_image(brand):
+    """
+    Returns an Unsplash Source URL for a car image based on brand.
+    Uses a fixed seed per brand so the image is consistent.
+    No API key required.
+    """
+    seed = abs(hash(brand.lower())) % 1000
+    query = f"{brand.lower()}-car-automobile"
+    return f"https://source.unsplash.com/800x450/?{query}&sig={seed}"
 
 def fuel_icon(fuel):
     return {"gasoline": "⛽", "electric": "⚡", "hybrid": "🔋", "diesel": "🛢️"}.get(str(fuel).lower(), "⛽")
-
 
 def transmission_icon(t):
     return "🕹️" if "manual" in str(t).lower() else "🔄"
@@ -299,11 +239,9 @@ def load_data():
     )
     return data
 
-
 @st.cache_resource
 def load_model():
     return joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
-
 
 df = load_data()
 ml_model = load_model()
@@ -350,30 +288,19 @@ with col_right:
 
         st.markdown('<div class="section-label">📸 Vehicle Preview</div>', unsafe_allow_html=True)
 
-        image_url = get_car_image_url(brand, model_name, year)
-        if image_url:
-            st.markdown(f"""
-            <div class="car-image-container">
-                <img src="{image_url}" alt="{year} {brand} {model_name}" />
-            </div>""", unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="car-image-container" style="flex-direction:column; gap:0.5rem;">
-                <div style="font-size:3.5rem;">🚗</div>
-                <div style="color:#3a3a4a; font-size:0.85rem;">{year} {brand.title()} {model_name.title()}</div>
-            </div>""", unsafe_allow_html=True)
+        image_url = get_car_image(brand)
+        st.markdown(f"""
+        <div class="car-image-container">
+            <img src="{image_url}" alt="{brand} car" />
+        </div>""", unsafe_allow_html=True)
 
         st.markdown(f"""
         <div style="margin-top:1.2rem; font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:700; color:#f0ede8;">
             {year} {brand.title()} {model_name.title()}
         </div>""", unsafe_allow_html=True)
 
-        # Stat pills
-        pills = [
-            f"📍 {int(milage):,} mi",
-            f"{fuel_icon(fuel_type)} {fuel_type.title()}",
-            f"{transmission_icon(transmission)} {simplify_transmission(transmission).title()}",
-        ]
+        pills = [f"📍 {int(milage):,} mi", f"{fuel_icon(fuel_type)} {fuel_type.title()}",
+                 f"{transmission_icon(transmission)} {simplify_transmission(transmission).title()}"]
         if not np.isnan(engine_hp):
             pills.append(f"🔥 {int(engine_hp)} HP")
         if not np.isnan(engine_cyl):
@@ -398,6 +325,7 @@ with col_right:
                 <div class="price-value">${prediction:,.0f}</div>
                 <div class="price-note">Based on {len(df):,} comparable vehicles · AI-powered estimate</div>
             </div>""", unsafe_allow_html=True)
+
     else:
         st.markdown("""
         <div style="height:300px; display:flex; align-items:center; justify-content:center; color:#3a3a4a; font-size:1rem;">
