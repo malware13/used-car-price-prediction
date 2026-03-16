@@ -4,10 +4,192 @@ import pandas as pd
 import numpy as np
 import joblib
 import os
+import requests
 
 CURRENT_YEAR = 2025
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# ----------------------------
+# Page Config
+# ----------------------------
+
+st.set_page_config(
+    page_title="AutoVal — Car Price Estimator",
+    page_icon="🚗",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# ----------------------------
+# Custom CSS
+# ----------------------------
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+}
+
+.stApp {
+    background: #0a0a0f;
+    color: #f0ede8;
+}
+
+#MainMenu, footer, header { visibility: hidden; }
+
+.hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 3.8rem;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #f0ede8 0%, #c8a96e 50%, #f0ede8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.3rem;
+}
+
+.hero-subtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: #7a7a8a;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+}
+
+.section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #c8a96e;
+    margin-bottom: 1rem;
+}
+
+.car-image-container {
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #13131a;
+    border: 1px solid #1e1e2e;
+    aspect-ratio: 16/9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.car-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.stat-row {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+}
+
+.stat-pill {
+    background: #1a1a24;
+    border: 1px solid #2a2a3a;
+    border-radius: 50px;
+    padding: 0.4rem 1rem;
+    font-size: 0.82rem;
+    color: #b0adb8;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.price-card {
+    background: linear-gradient(135deg, #1a1508 0%, #13131a 100%);
+    border: 1px solid #c8a96e55;
+    border-radius: 20px;
+    padding: 2.5rem;
+    text-align: center;
+    margin-top: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.price-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, #c8a96e08 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.price-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #c8a96e;
+    margin-bottom: 0.5rem;
+}
+
+.price-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: #f0ede8;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.price-note {
+    font-size: 0.8rem;
+    color: #5a5a6a;
+    margin-top: 0.8rem;
+}
+
+.divider {
+    border: none;
+    border-top: 1px solid #1e1e2e;
+    margin: 1.5rem 0;
+}
+
+.stSelectbox > div > div {
+    background: #13131a !important;
+    border: 1px solid #2a2a3a !important;
+    border-radius: 10px !important;
+    color: #f0ede8 !important;
+}
+
+.stButton > button {
+    background: linear-gradient(135deg, #c8a96e, #a07840) !important;
+    color: #0a0a0f !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.05em !important;
+    padding: 0.7rem 2rem !important;
+    width: 100% !important;
+    transition: opacity 0.2s ease !important;
+}
+
+.stButton > button:hover {
+    opacity: 0.85 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 # ----------------------------
 # Helper Functions
@@ -42,124 +224,187 @@ def extract_cylinders(engine_str):
 
 def build_features(brand, model_name, model_year, milage, fuel_type,
                    transmission, ext_col, accident, engine=""):
-
     car_age = CURRENT_YEAR - model_year
     mileage_per_year = milage / (car_age + 1)
     mileage_sq = milage ** 2
     age_sq = car_age ** 2
     age_x_mileage = car_age * milage
-
-    fuel_remap = {"–": "unknown", "not supported": "unknown",
-                  "nan": "unknown", "": "unknown"}
+    fuel_remap = {"–": "unknown", "not supported": "unknown", "nan": "unknown", "": "unknown"}
     fuel_type_clean = fuel_remap.get(fuel_type, fuel_type)
-
     transmission_clean = simplify_transmission(transmission)
     ext_col_clean = simplify_ext_col(ext_col)
-
     engine_hp = extract_engine_hp(engine)
     engine_cylinders = extract_cylinders(engine)
-
     return pd.DataFrame([{
-        "brand": brand,
-        "model": model_name,
-        "fuel_type": fuel_type_clean,
-        "transmission_clean": transmission_clean,
-        "ext_col_clean": ext_col_clean,
-
-        "model_year": model_year,
-        "car_age": car_age,
-        "milage": milage,
-        "accident": int(accident),
-        "engine_hp": engine_hp,
-        "engine_cylinders": engine_cylinders,
-        "mileage_per_year": mileage_per_year,
-        "mileage_sq": mileage_sq,
-        "age_sq": age_sq,
-        "age_x_mileage": age_x_mileage,
+        "brand": brand, "model": model_name, "fuel_type": fuel_type_clean,
+        "transmission_clean": transmission_clean, "ext_col_clean": ext_col_clean,
+        "model_year": model_year, "car_age": car_age, "milage": milage,
+        "accident": int(accident), "engine_hp": engine_hp,
+        "engine_cylinders": engine_cylinders, "mileage_per_year": mileage_per_year,
+        "mileage_sq": mileage_sq, "age_sq": age_sq, "age_x_mileage": age_x_mileage,
     }])
 
+
+def get_car_image_url(brand, model_name, year):
+    """Try to fetch car image from Wikipedia."""
+    try:
+        query = f"{year} {brand} {model_name}"
+        params = {
+            "action": "query",
+            "titles": query,
+            "prop": "pageimages",
+            "format": "json",
+            "pithumbsize": 700,
+            "redirects": 1
+        }
+        resp = requests.get("https://en.wikipedia.org/w/api.php", params=params, timeout=5)
+        pages = resp.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            thumb = page.get("thumbnail", {}).get("source")
+            if thumb:
+                return thumb
+    except Exception:
+        pass
+    return None
+
+
+def fuel_icon(fuel):
+    return {"gasoline": "⛽", "electric": "⚡", "hybrid": "🔋", "diesel": "🛢️"}.get(str(fuel).lower(), "⛽")
+
+
+def transmission_icon(t):
+    return "🕹️" if "manual" in str(t).lower() else "🔄"
+
+
 # ----------------------------
-# Load Data
+# Load Data & Model
 # ----------------------------
 
-df = pd.read_csv(os.path.join(BASE_DIR, "used_cars.csv"))
-df.columns = df.columns.str.strip().str.lower()
+@st.cache_data
+def load_data():
+    data = pd.read_csv(os.path.join(BASE_DIR, "used_cars.csv"))
+    data.columns = data.columns.str.strip().str.lower()
+    for col in data.select_dtypes(include="object").columns:
+        data[col] = data[col].astype(str).str.strip().str.lower()
+    data["model_year"] = pd.to_numeric(data["model_year"], errors="coerce")
+    data["milage"] = (
+        data["milage"].astype(str)
+        .str.replace(",", "", regex=False)
+        .str.extract(r"(\d+)")
+    )
+    data["milage"] = pd.to_numeric(data["milage"], errors="coerce")
+    data["accident"] = data["accident"].fillna("none").astype(str).str.lower()
+    data["accident"] = data["accident"].apply(
+        lambda x: 0 if any(w in x for w in ["none", "no", "clean"]) else 1
+    )
+    return data
 
-for col in df.select_dtypes(include="object").columns:
-    df[col] = df[col].astype(str).str.strip().str.lower()
 
-df["model_year"] = pd.to_numeric(df["model_year"], errors="coerce")
-df["milage"] = (
-    df["milage"]
-    .astype(str)
-    .str.replace(",", "", regex=False)
-    .str.extract(r"(\d+)")
-)
-df["milage"] = pd.to_numeric(df["milage"], errors="coerce")
+@st.cache_resource
+def load_model():
+    return joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
 
-df["accident"] = df["accident"].fillna("none").astype(str).str.lower()
-df["accident"] = df["accident"].apply(
-    lambda x: 0 if any(w in x for w in ["none", "no", "clean"]) else 1
-)
 
-model = joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
+df = load_data()
+ml_model = load_model()
 
 # ----------------------------
-# Streamlit UI
+# UI
 # ----------------------------
 
-st.title("🚗 Used Car Price Prediction")
+st.markdown('<div class="hero-title">AutoVal</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-subtitle">Intelligent Used Car Price Estimator</div>', unsafe_allow_html=True)
 
-brand = st.selectbox(
-    "Select Brand",
-    sorted(df["brand"].dropna().unique())
-)
+col_left, col_right = st.columns([1, 1.4], gap="large")
 
-models = sorted(df[df["brand"] == brand]["model"].unique())
-model_name = st.selectbox("Select Model", models)
+with col_left:
+    st.markdown('<div class="section-label">🔍 Configure Your Search</div>', unsafe_allow_html=True)
+    brand = st.selectbox("Brand", sorted(df["brand"].dropna().unique()))
+    models_list = sorted(df[df["brand"] == brand]["model"].unique())
+    model_name = st.selectbox("Model", models_list)
+    years = sorted(
+        df[(df["brand"] == brand) & (df["model"] == model_name)]["model_year"]
+        .dropna().astype(int).unique()
+    )
+    year = st.selectbox("Model Year", years)
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    predict_clicked = st.button("✦ Estimate Price")
 
-years = sorted(
-    df[(df["brand"] == brand) & (df["model"] == model_name)]["model_year"]
-    .dropna().astype(int).unique()
-)
+with col_right:
+    car_row = df[
+        (df["brand"] == brand) &
+        (df["model"] == model_name) &
+        (df["model_year"] == year)
+    ]
 
-year = st.selectbox("Select Model Year", years)
+    if not car_row.empty:
+        car = car_row.iloc[0]
+        milage = float(car.get("milage", 0) or 0)
+        fuel_type = car.get("fuel_type", "gasoline")
+        transmission = car.get("transmission", "automatic")
+        ext_col = car.get("ext_col", "other")
+        accident = car.get("accident", 0)
+        engine = car.get("engine", "")
+        engine_hp = extract_engine_hp(engine)
+        engine_cyl = extract_cylinders(engine)
 
-car_row = df[
-    (df["brand"] == brand) &
-    (df["model"] == model_name) &
-    (df["model_year"] == year)
-]
+        st.markdown('<div class="section-label">📸 Vehicle Preview</div>', unsafe_allow_html=True)
 
-if not car_row.empty:
+        image_url = get_car_image_url(brand, model_name, year)
+        if image_url:
+            st.markdown(f"""
+            <div class="car-image-container">
+                <img src="{image_url}" alt="{year} {brand} {model_name}" />
+            </div>""", unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="car-image-container" style="flex-direction:column; gap:0.5rem;">
+                <div style="font-size:3.5rem;">🚗</div>
+                <div style="color:#3a3a4a; font-size:0.85rem;">{year} {brand.title()} {model_name.title()}</div>
+            </div>""", unsafe_allow_html=True)
 
-    car = car_row.iloc[0]
+        st.markdown(f"""
+        <div style="margin-top:1.2rem; font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:700; color:#f0ede8;">
+            {year} {brand.title()} {model_name.title()}
+        </div>""", unsafe_allow_html=True)
 
-    milage = float(car.get("milage", 0))
-    fuel_type = car.get("fuel_type", "gasoline")
-    transmission = car.get("transmission", "automatic")
-    ext_col = car.get("ext_col", "other")
-    accident = car.get("accident", 0)
-    engine = car.get("engine", "")
+        # Stat pills
+        pills = [
+            f"📍 {int(milage):,} mi",
+            f"{fuel_icon(fuel_type)} {fuel_type.title()}",
+            f"{transmission_icon(transmission)} {simplify_transmission(transmission).title()}",
+        ]
+        if not np.isnan(engine_hp):
+            pills.append(f"🔥 {int(engine_hp)} HP")
+        if not np.isnan(engine_cyl):
+            pills.append(f"🔩 {int(engine_cyl)}-cyl")
+        pills.append(f"🎨 {ext_col.title()}")
+        pills.append("⚠️ Accident History" if accident else "✅ Clean History")
 
-    st.write("### Car Details")
-    st.write(car)
+        pills_html = "".join([f'<span class="stat-pill">{p}</span>' for p in pills])
+        st.markdown(f'<div class="stat-row">{pills_html}</div>', unsafe_allow_html=True)
 
-    if st.button("Predict Price"):
+        if predict_clicked:
+            X = build_features(
+                brand=brand, model_name=model_name, model_year=year,
+                milage=milage, fuel_type=fuel_type, transmission=transmission,
+                ext_col=ext_col, accident=accident, engine=engine
+            )
+            log_pred = ml_model.predict(X)[0]
+            prediction = np.expm1(log_pred)
+            st.markdown(f"""
+            <div class="price-card">
+                <div class="price-label">Estimated Market Value</div>
+                <div class="price-value">${prediction:,.0f}</div>
+                <div class="price-note">Based on {len(df):,} comparable vehicles · AI-powered estimate</div>
+            </div>""", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="height:300px; display:flex; align-items:center; justify-content:center; color:#3a3a4a; font-size:1rem;">
+            Select a brand, model, and year to get started
+        </div>""", unsafe_allow_html=True)
 
-        X = build_features(
-            brand=brand,
-            model_name=model_name,
-            model_year=year,
-            milage=milage,
-            fuel_type=fuel_type,
-            transmission=transmission,
-            ext_col=ext_col,
-            accident=accident,
-            engine=engine
-        )
-
-        log_pred = model.predict(X)[0]
-        prediction = np.expm1(log_pred)
-
-        st.success(f"Estimated Price: ${prediction:,.2f}")
+st.markdown("""
+<div style="margin-top:4rem; padding-top:1.5rem; border-top:1px solid #1e1e2e; text-align:center; color:#3a3a4a; font-size:0.78rem; letter-spacing:0.05em;">
+    AUTOVAL · Powered by Machine Learning · Estimates are for reference only
+</div>""", unsafe_allow_html=True)
